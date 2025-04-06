@@ -11,8 +11,8 @@ yolo task=detect mode=train model=yolov8n.pt data=indian_plate.yaml epochs=50
 yolo task=detect mode=val model=runs/detect/train/weights/best.pt data=indian_plate.yaml
 Export:
 Copy the best model file (usually best.pt from runs/detect/train/weights/) into your project’s models folder and rename it (for example, to indian_plate_detection.pt).
-
-
+python generate_no_plate.py
+python train_cnn.py
 PROJECT
  ├── data
  │     └── database.db
@@ -38,7 +38,15 @@ PROJECT
  ├── setup.sh
  └── webapp.sh
 
-
+cnn_classifier_data/
+├── train/
+│   ├── with_plate/      <- Your real samples
+│   └── no_plate/        <- Dummy images (auto-generated)
+├── val/
+│   ├── with_plate/
+│   └── no_plate/
+models/
+└── cnn_plate_classifier.h5
 
 streamlit run app.py
 
