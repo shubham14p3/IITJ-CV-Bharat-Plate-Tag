@@ -2,6 +2,43 @@
 python -m venv env
 
 source env/Scripts/activate
+pip install streamlit opencv-python-headless ultralytics numpy pillow tensorflow matplotlib scikit-learn
+pip freeze > requirements.txt
+
+yolo task=detect mode=train model=yolov8n.pt data=indian_plate.yaml epochs=50
+
+
+yolo task=detect mode=val model=runs/detect/train/weights/best.pt data=indian_plate.yaml
+Export:
+Copy the best model file (usually best.pt from runs/detect/train/weights/) into your project’s models folder and rename it (for example, to indian_plate_detection.pt).
+
+
+PROJECT
+ ├── data
+ │     └── database.db
+ ├── env
+ ├── images
+ │     └── plate_template.png   # if needed for UI or plate generation (not used for detection)
+ ├── models
+ │     ├── indian_plate_detection.pt  # your trained YOLO model
+ ├── resources
+ │     └── B Traffic_O.ttf
+ ├── settings
+ │     └── settings.py
+ ├── src
+ │     ├── app.py                   # Main Streamlit app
+ │     ├── sort.py                  # Tracker code (if you need tracking)
+ │     ├── SQLManager.py            # For database handling
+ │     ├── PlateGen.py              # (Optional) For generating plate images
+ │     └── plate_reader.py          # (Not used since OCR is not allowed)
+ ├── videos
+ │     └── test.mp4
+ ├── README.md
+ ├── requirements.txt
+ ├── setup.sh
+ └── webapp.sh
+
+
 
 streamlit run app.py
 
