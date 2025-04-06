@@ -20,8 +20,8 @@ def PlateGen(plate_text):
     font = cv2.FONT_HERSHEY_SIMPLEX
     
     # Increase font scale and thickness for a larger, bolder look
-    font_scale = 8
-    thickness = 4
+    font_scale = 7
+    thickness = 15
     
     # Determine the size of the text to center it on the template
     text_size = cv2.getTextSize(plate_text, font, font_scale, thickness)[0]

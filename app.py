@@ -249,7 +249,7 @@ def detect_ocr_plate(image):
                     st.image(
                         cv2.cvtColor(stylized_plate, cv2.COLOR_BGR2RGB),
                         caption=f"Recognized Plate: {recognized_text}",
-                        use_column_width=True
+                        use_container_width=True
                     )
     return image, recognized_texts
 
@@ -276,13 +276,13 @@ if input_type == "Image":
             annotated_image, recognized_texts = result
             st.image(cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB),
                      caption="Detection Result",
-                     use_column_width=True)
+                     use_container_width=True)
             # Optionally, you can display the recognized text(s)
             st.write("Recognized Plate(s):", recognized_texts)
         else:
             st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB),
                      caption="Detection Result",
-                     use_column_width=True)
+                     use_container_width=True)
 
 # ==== Video Upload ====
 elif input_type == "Video":
@@ -306,7 +306,7 @@ elif input_type == "Video":
             
             # Now, annotated_frame should be an image array
             stframe.image(cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB),
-                          use_column_width=True, channels="RGB")
+                          use_container_width=True, channels="RGB")
         cap.release()
 
 
