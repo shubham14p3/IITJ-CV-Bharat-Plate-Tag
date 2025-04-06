@@ -11,6 +11,8 @@ from ultralytics import YOLO
 from tensorflow.keras.models import load_model
 from src.SQLManager import DatabaseManager
 from src.sort import *
+import pytesseract
+from src.PlateGen import PlateGen
 
 # ==== Page Config ====
 st.set_page_config(page_title="Bharat Number Plate Detector", layout="wide")
@@ -151,7 +153,8 @@ method = st.sidebar.selectbox("Detection Method", [
     "Traditional CV (Canny + Contours)",
     "Color Segmentation",
     "Edge + Morph Filter",
-    "CNN Classifier (Custom DL)"
+    "CNN Classifier (Custom DL)",
+    "OCR Plate Recognition"
 ])
 conf_threshold = st.sidebar.slider("Confidence Threshold", 25, 100, 45) / 100
 show_db = st.sidebar.checkbox("Show Plate Log")
@@ -215,6 +218,40 @@ def detect_cnn(image):
     color = (0, 255, 0) if pred > 0.5 else (0, 0, 255)
     cv2.putText(image, label, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
     return image
+def detect_ocr_plate(image):
+    # Use YOLO to detect the plate region(s)
+    results = yolo_model(image, stream=True, verbose=False)
+    recognized_texts = []  # To store recognized plate texts
+
+    for r in results:
+        for box in r.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            conf = float(box.conf[0])
+            if conf >= conf_threshold:
+                # Draw bounding box for visual feedback
+                cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(image, f"{conf:.2f}", (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                
+                # Crop the plate region
+                plate_roi = image[y1:y2, x1:x2]
+                
+                # Use Tesseract to extract text from the cropped region
+                recognized_text = pytesseract.image_to_string(plate_roi, config="--psm 7").strip()
+                # Clean the text (optional): remove non-alphanumeric characters
+                recognized_text = "".join(char for char in recognized_text if char.isalnum())
+                
+                if recognized_text:
+                    recognized_texts.append(recognized_text)
+                    # Generate the stylized plate image using PlateGen
+                    stylized_plate = PlateGen(recognized_text)
+                    # Display the generated plate image
+                    st.image(
+                        cv2.cvtColor(stylized_plate, cv2.COLOR_BGR2RGB),
+                        caption=f"Recognized Plate: {recognized_text}",
+                        use_column_width=True
+                    )
+    return image, recognized_texts
 
 def run_detection(image):
     if method == "YOLOv8 (Deep Learning)": return detect_yolo(image)
@@ -222,6 +259,7 @@ def run_detection(image):
     elif method == "Color Segmentation": return detect_color(image)
     elif method == "Edge + Morph Filter": return detect_morph(image)
     elif method == "CNN Classifier (Custom DL)": return detect_cnn(image)
+    elif method == "OCR Plate Recognition": return detect_ocr_plate(image)
     return image
 
 # ==== Image Upload ====
@@ -230,8 +268,21 @@ if input_type == "Image":
     if uploaded_image:
         img_data = np.frombuffer(uploaded_image.read(), np.uint8)
         image = cv2.imdecode(img_data, cv2.IMREAD_COLOR)
+        
         result = run_detection(image.copy())
-        st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), caption="Detection Result", use_column_width=True)
+        
+        if method == "OCR Plate Recognition":
+            # Unpack the tuple returned by detect_ocr_plate
+            annotated_image, recognized_texts = result
+            st.image(cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB),
+                     caption="Detection Result",
+                     use_column_width=True)
+            # Optionally, you can display the recognized text(s)
+            st.write("Recognized Plate(s):", recognized_texts)
+        else:
+            st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB),
+                     caption="Detection Result",
+                     use_column_width=True)
 
 # ==== Video Upload ====
 elif input_type == "Video":
@@ -243,10 +294,21 @@ elif input_type == "Video":
         stframe = st.empty()
         while cap.isOpened():
             ret, frame = cap.read()
-            if not ret: break
+            if not ret:
+                break
+            
             result = run_detection(frame.copy())
-            stframe.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), use_column_width=True, channels="RGB")
+            # If result is a tuple (OCR method), unpack it
+            if isinstance(result, tuple):
+                annotated_frame, _ = result  # Ignore recognized texts for video display
+            else:
+                annotated_frame = result
+            
+            # Now, annotated_frame should be an image array
+            stframe.image(cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB),
+                          use_column_width=True, channels="RGB")
         cap.release()
+
 
 # ==== Database Viewer ====
 if show_db:

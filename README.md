@@ -4,9 +4,9 @@ python -m venv env
 source env/Scripts/activate (For Git Bash Only)
 .\env\Scripts\Activate.ps1 (For Powershell)
 
-pip install streamlit opencv-python-headless ultralytics numpy pillow tensorflow matplotlib scikit-learn filterpy
+pip install streamlit opencv-python-headless ultralytics numpy pillow tensorflow matplotlib pytesseract scikit-learn filterpy
 pip freeze > requirements.txt
-
+https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe
 yolo task=detect mode=train model=yolov8n.pt data=indian_plate.yaml epochs=50
 
 
@@ -53,3 +53,4 @@ source env/Scripts/activate
 streamlit run app.py
 
 
+tesseract --version
