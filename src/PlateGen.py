@@ -4,7 +4,7 @@ import os
 
 def PlateGen(plate_text):
     # Path to your template image (adjust the path as needed)
-    template_path = "image/plate_template.png"
+    template_path = "assets/plate_template.png"
     
     # Check if the file exists
     if not os.path.exists(template_path):

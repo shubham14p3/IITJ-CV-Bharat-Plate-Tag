@@ -1,0 +1,7 @@
+#Give the path to the dataset
+# The dataset should be in the following structure:
+train: dataset/images/train
+val: dataset/images/val
+
+nc: 1
+names: ["license_plate"]
