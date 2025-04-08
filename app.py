@@ -209,28 +209,26 @@ def recognize_plate_text(image):
 
 def run_detection(image):
     if method == "YOLOv8 (Deep Learning)":
-        detected_img = detect_yolo(image)
+        # Run YOLO detection and return the result directly.
+        return detect_yolo(image)
     elif method == "Traditional CV (Canny + Contours)":
-        detected_img = detect_traditional(image)
+        # Run traditional Canny and contour detection.
+        return detect_traditional(image)
     elif method == "Color Segmentation":
-        detected_img = detect_color(image)
+        # Use color segmentation only.
+        return detect_color(image)
     elif method == "Edge + Morph Filter":
-        detected_img = detect_morph(image)
+        # Use edge detection with morphological filtering.
+        return detect_morph(image)
     elif method == "CNN Classifier (Custom DL)":
+        # For CNN-based plate detection and recognition, run the CNN routine.
         return detect_cnn(image)
     elif method == "OCR Plate Recognition":
+        # For OCR-based plate recognition.
         return detect_ocr_plate(image)
     else:
-        detected_img = image
+        return image
 
-    plate_text = recognize_plate_text(image.copy())
-    if plate_text is not None:
-        final_img, _ = detect_license_plate(image, plate_text)
-        # Overlay the recognized plate text in the top-left corner with black background and white text
-        final_img = overlay_plate_text(final_img, plate_text)
-        return final_img
-    else:
-        return detected_img
 
 # -------- Helper: Overlay Plate Text on an image --------
 def overlay_plate_text(image, plate_text):
