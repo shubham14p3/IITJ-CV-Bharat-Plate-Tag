@@ -8,11 +8,16 @@ import base64
 import os
 import tempfile
 from ultralytics import YOLO
-from tensorflow.keras.models import load_model
 from src.SQLManager import DatabaseManager
 from src.sort import *
 import pytesseract
 from src.PlateGen import PlateGen
+from src.cnn_plate_pipeline import (
+    detect_license_plate,
+    segment_characters,
+    predict_plate_number,
+    load_or_train_cnn_model
+)
 
 # ==== Page Config ====
 st.set_page_config(page_title="Bharat Number Plate Detector", layout="wide")
@@ -92,7 +97,6 @@ st.markdown(f"""
             <img src="data:assets/png;base64,{logo_encoded}" />
             Bharat Plate Detection
         </div>
-
     </div>
 """, unsafe_allow_html=True)
 
@@ -107,7 +111,6 @@ st.markdown("""
         padding-top: 1rem;
         padding-bottom: 1rem;
         margin-top: 5rem;
-        # background-color: #ffffff;
         border-radius: 10px;
         box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
@@ -132,14 +135,12 @@ db_manager = DatabaseManager('data', 'database.db')
 db_manager.create_recognized_plates_table()
 
 # ==== Model Loading ====
+# Load the YOLO model for plate detection. The CNN model for character recognition will be loaded inside detect_cnn.
 yolo_model_path = Path("models/indian_plate_detection.pt")
-cnn_model_path = Path("models/cnn_plate_classifier.h5")
-
 try:
     yolo_model = YOLO(yolo_model_path)
-    cnn_model = load_model(cnn_model_path)
 except Exception as e:
-    st.error(f"Model loading failed: {e}")
+    st.error(f"YOLO model loading failed: {e}")
     st.stop()
 
 # ==== Sidebar ====
@@ -209,12 +210,35 @@ def detect_morph(image):
     return image
 
 def detect_cnn(image):
-    resized = cv2.resize(image, (64, 64)) / 255.0
-    pred = cnn_model.predict(np.expand_dims(resized, axis=0))[0][0]
-    label = "Plate" if pred > 0.5 else "No Plate"
-    color = (0, 255, 0) if pred > 0.5 else (0, 0, 255)
-    cv2.putText(image, label, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-    return image
+    # Load the CNN model from your module (which loads from models/plate_classifier.h5)
+    cnn_model = load_or_train_cnn_model()
+
+    plate_img, cropped_plate = detect_license_plate(image)
+    # Show cropped plate preview
+    st.image(cropped_plate, caption="🧪 Cropped Plate Region", channels="BGR", use_container_width=True)
+
+    if cropped_plate is None:
+        st.warning("⚠️ No license plate detected.")
+        return image
+
+    char_imgs = segment_characters(cropped_plate)
+    # Show how many characters were found
+    st.write(f"🧩 Number of segmented characters: {len(char_imgs)}")
+    if len(char_imgs) == 0:
+        st.warning("⚠️ Could not segment characters from plate.")
+        return image
+
+    plate_number = predict_plate_number(cnn_model, char_imgs)
+
+    final_img, _ = detect_license_plate(image, plate_number)
+
+    stylized_plate = PlateGen(plate_number)
+    st.image(cv2.cvtColor(stylized_plate, cv2.COLOR_BGR2RGB),
+             caption=f"Predicted Plate: {plate_number}",
+             use_container_width=True)
+
+    return final_img
+
 def detect_ocr_plate(image):
     # Use YOLO to detect the plate region(s)
     results = yolo_model(image, stream=True, verbose=False)
@@ -251,12 +275,18 @@ def detect_ocr_plate(image):
     return image, recognized_texts
 
 def run_detection(image):
-    if method == "YOLOv8 (Deep Learning)": return detect_yolo(image)
-    elif method == "Traditional CV (Canny + Contours)": return detect_traditional(image)
-    elif method == "Color Segmentation": return detect_color(image)
-    elif method == "Edge + Morph Filter": return detect_morph(image)
-    elif method == "CNN Classifier (Custom DL)": return detect_cnn(image)
-    elif method == "OCR Plate Recognition": return detect_ocr_plate(image)
+    if method == "YOLOv8 (Deep Learning)":
+        return detect_yolo(image)
+    elif method == "Traditional CV (Canny + Contours)":
+        return detect_traditional(image)
+    elif method == "Color Segmentation":
+        return detect_color(image)
+    elif method == "Edge + Morph Filter":
+        return detect_morph(image)
+    elif method == "CNN Classifier (Custom DL)":
+        return detect_cnn(image)
+    elif method == "OCR Plate Recognition":
+        return detect_ocr_plate(image)
     return image
 
 # ==== Image Upload ====
@@ -274,7 +304,6 @@ if input_type == "Image":
             st.image(cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB),
                      caption="Detection Result",
                      use_container_width=True)
-            # Optionally, you can display the recognized text(s)
             st.write("Recognized Plate(s):", recognized_texts)
         else:
             st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB),
@@ -295,17 +324,14 @@ elif input_type == "Video":
                 break
             
             result = run_detection(frame.copy())
-            # If result is a tuple (OCR method), unpack it
             if isinstance(result, tuple):
-                annotated_frame, _ = result  # Ignore recognized texts for video display
+                annotated_frame, _ = result
             else:
                 annotated_frame = result
             
-            # Now, annotated_frame should be an image array
             stframe.image(cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB),
                           use_container_width=True, channels="RGB")
         cap.release()
-
 
 # ==== Database Viewer ====
 if show_db:
@@ -323,7 +349,7 @@ if show_db:
 
     st.markdown(download_excel(df), unsafe_allow_html=True)
 
-# Encode logo from assets/logo.png
+# ==== Footer ====
 logo_path = "assets/logo.png"
 with open(logo_path, "rb") as image_file:
     logo_encoded = base64.b64encode(image_file.read()).decode()

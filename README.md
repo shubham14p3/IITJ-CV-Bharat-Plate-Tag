@@ -28,7 +28,7 @@ source env/Scripts/activate        # Git Bash
 ### 📦 Install Required Packages
 
 ```bash
-pip install streamlit opencv-python-headless ultralytics numpy pillow tensorflow matplotlib pytesseract scikit-learn filterpy
+pip install streamlit opencv-python-headless ultralytics numpy pillow tensorflow matplotlib pytesseract scikit-learn filterpy openpyxl 
 pip freeze > requirements.txt
 ```
 
@@ -114,7 +114,7 @@ source env/Scripts/activate
 
 2. Run the Streamlit Web App:
 ```bash
-streamlit run src/app.py
+streamlit run app.py
 ```
 
 3. Optional: Install [Tesseract OCR](https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe)
