@@ -10,10 +10,10 @@ import tensorflow.keras.backend as K
 import streamlit as st
 
 # -------------------------------
-# Function: detect_license_plate
+# Function: iitj_cv_bharat_plate
 # -------------------------------
 def detect_license_plate(image, plate_text=''):
-    cascade_path = 'models/indian_license_plate.xml'
+    cascade_path = 'models/iitj_cv_bharat_plate.xml'
     plate_cascade = cv2.CascadeClassifier(cascade_path)
     image_copy = image.copy()
     detected_plate = None

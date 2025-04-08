@@ -6,11 +6,13 @@ Bharat Number Plate Tag: Multi-Approach Vehicle Plate Detection using YOLO, CNN,
 [![Stargazers][stars-shield]][stars-url]  
 ![Issues][issues-shield]
 
+Live Demo: [https://abc.com](https://abc.com)
+
 ---
 
 ## 🧭 Overview
 
-This project is part of a Computer Vision capstone at **IIT Jodhpur**, focused on robust number plate detection and tagging in Indian traffic scenarios. It combines modern Deep Learning (YOLOv8, CNN), Optical Character Recognition (Tesseract OCR), and traditional Computer Vision techniques. The end result is a fully interactive **Streamlit-based Web Application** with image/video support, plate recognition, and plate tagging.
+This project is part of a Computer Vision capstone at **IIT Jodhpur**, aimed at building a robust number plate recognition system for Indian traffic scenarios. It fuses multiple approaches: Deep Learning (YOLOv8, CNN), Optical Character Recognition (Tesseract OCR), and traditional Computer Vision (Canny, Morphology, Color Segmentation). The final result is a Streamlit-based web app capable of real-time and batch image/video analysis.
 
 ---
 
@@ -32,25 +34,57 @@ pip install streamlit opencv-python-headless ultralytics numpy pillow tensorflow
 pip freeze > requirements.txt
 ```
 
-### 🧠 Model Training & Usage
+---
 
-#### YOLOv8 Indian Plate Detector
+## 🧠 Model Training & Usage
+
+### YOLOv8: Indian Plate Detector
+
+- **Training File**: `indian_plate.yaml`
+
+```yaml
+# Format for YOLOv8 training
+dataset:
+  train: dataset/images/train
+  val: dataset/images/val
+nc: 1
+names: ["license_plate"]
+```
 
 ```bash
 yolo task=detect mode=train model=yolov8n.pt data=indian_plate.yaml epochs=50
 yolo task=detect mode=val model=runs/detect/train/weights/best.pt data=indian_plate.yaml
 ```
 
-Move the best model to models directory:
-```
-models/indian_plate_detection.pt
-```
+- **Output model**: `models/iitj_cv_bharat_plate.pt`
 
-#### CNN Classifier
+### CNN Binary Classifier: Plate / No Plate
+
+- Files:
+  - `generate_no_plate.py`: Creates dummy non-plate images using noise
+  - `train_cnn.py`: Trains CNN on labeled plate/no_plate images
 
 ```bash
 python generate_no_plate.py
 python train_cnn.py
+```
+
+#### `train_cnn.py` Highlights:
+
+- Uses **ImageDataGenerator** for image augmentation
+- CNN with 3 convolution layers, binary sigmoid output
+- Saved models:
+  - `cnn_plate_classifier_best.h5`
+  - `cnn_plate_classifier_latest.h5`
+- Graphs: `training_metrics.png`
+
+```python
+train_datagen = ImageDataGenerator(
+    rescale=1./255, rotation_range=10, zoom_range=0.1,
+    width_shift_range=0.1, height_shift_range=0.1,
+    shear_range=0.1, horizontal_flip=True)
+
+val_datagen = ImageDataGenerator(rescale=1./255)
 ```
 
 ---
@@ -65,27 +99,27 @@ BHARAT-NUMBER-PLATE-TAG/
 ├── images/
 │   └── plate_template.png
 ├── models/
-│   ├── indian_plate_detection.pt
-│   └── cnn_plate_classifier.h5
+│   ├── iitj_cv_bharat_plate.pt
+│   ├── cnn_plate_classifier_best.h5
+│   ├── cnn_plate_classifier_latest.h5
+│   └── yolov8n.pt
+├── assets/
+│   └── report.pdf  <-- [Dummy Report](https://abc.com/zbc.pdf)
 ├── resources/
 │   └── B Traffic_O.ttf
 ├── settings/
 │   └── settings.py
 ├── src/
 │   ├── app.py
-│   ├── sort.py
 │   ├── SQLManager.py
 │   ├── PlateGen.py
-│   └── plate_reader.py
+│   ├── plate_reader.py
+│   └── sort.py
+├── cnn_classifier_data/
+│   ├── train/with_plate/, no_plate/
+│   └── val/with_plate/, no_plate/
 ├── videos/
 │   └── test.mp4
-├── cnn_classifier_data/
-│   ├── train/
-│   │   ├── with_plate/
-│   │   └── no_plate/
-│   └── val/
-│       ├── with_plate/
-│       └── no_plate/
 ├── README.md
 ├── requirements.txt
 ├── setup.sh
@@ -94,14 +128,31 @@ BHARAT-NUMBER-PLATE-TAG/
 
 ---
 
-## 🔍 Detection Modes Supported
+## 🔍 Detection Modes Explained
 
-- YOLOv8 Deep Learning Detector  
-- Traditional Canny + Contours CV  
-- HSV Color Segmentation  
-- Morphology-based Edge Filter  
-- Custom CNN Binary Classifier  
-- OCR-based Plate Recognition with Stylized Output
+1. **YOLOv8 (Deep Learning)**  
+   - Pretrained `yolov8n.pt` adapted for Indian plates
+   - Output: Bounding boxes with confidence scores
+
+2. **Traditional CV (Canny + Contours)**  
+   - Uses edge detection and contour approximation
+   - Lightweight and effective in good lighting
+
+3. **Color Segmentation (HSV)**  
+   - HSV color space filtering for yellow/white plates
+   - Fast, good in controlled environments
+
+4. **Edge + Morph Filter**  
+   - Morphological operations after edge detection
+   - Enhances plate boundary separation
+
+5. **CNN Classifier (Custom DL)**  
+   - Custom Keras CNN for binary classification: plate vs. no_plate
+   - Useful for filtering false detections
+
+6. **OCR Plate Recognition**  
+   - Tesseract OCR for text extraction
+   - Output is stylized using plate template overlays
 
 ---
 
@@ -112,12 +163,12 @@ BHARAT-NUMBER-PLATE-TAG/
 source env/Scripts/activate
 ```
 
-2. Run the Streamlit Web App:
+2. Launch the Web App:
 ```bash
 streamlit run app.py
 ```
 
-3. Optional: Install [Tesseract OCR](https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe)
+3. Optional: Install [Tesseract OCR](https://github.com/tesseract-ocr/tesseract/releases)
 
 ---
 

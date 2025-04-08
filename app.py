@@ -54,7 +54,7 @@ db_manager = DatabaseManager("data", "database.db")
 db_manager.create_recognized_plates_table()
 
 # ==== Model Loading for YOLO (CNN model is loaded later within functions) ====
-yolo_model_path = Path("models/indian_plate_detection.pt")
+yolo_model_path = Path("models/iitj_cv_bharat_plate.pt")
 try:
     yolo_model = YOLO(yolo_model_path)
 except Exception as e:
