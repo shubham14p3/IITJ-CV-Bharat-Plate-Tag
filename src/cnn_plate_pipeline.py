@@ -136,30 +136,40 @@ def fix_dimension(img, target_size):
         img_resized = np.concatenate([img_resized]*3, axis=-1)
     return img_resized.astype(np.float32) / 255.0
 
-# -----------------------------------
-# Function: predict_plate_number
-# -----------------------------------
+def fix_dimension(img):
+    """
+    Resizes a grayscale character image to 28×28 and replicates it to 3 channels.
+    This ensures that no matter what size is returned by segmentation,
+    the final image sent to the model is exactly 28x28x3.
+    """
+    # Resize to 28x28 using INTER_AREA for good quality when downsizing/upscaling
+    resized = cv2.resize(img, (28, 28), interpolation=cv2.INTER_AREA)
+    # If the image is grayscale (2D), duplicate the channel to make it 3-channel.
+    if len(resized.shape) == 2:
+        resized = np.stack([resized] * 3, axis=-1)
+    elif resized.shape[2] == 1:
+        resized = np.concatenate([resized] * 3, axis=-1)
+    return resized.astype(np.float32) / 255.0
+
 def predict_plate_number(model, char_imgs):
     """
-    Predicts the plate number by resizing each segmented character to match the model's input shape.
-    Uses the model's input shape to determine the target size.
-    Returns a concatenated string representing the plate number.
+    For each segmented character image, resize it to 28x28 with fix_dimension,
+    then run it through the CNN model to predict the character. It then concatenates
+    all predictions into the final plate number.
     """
-    # Create a dictionary to map model output indices to characters
+    # Mapping of class indices to characters
     char_dict = {i: ch for i, ch in enumerate('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')}
-    # Retrieve the model input shape: e.g., (None, H, W, C)
-    input_shape = model.input_shape  
-    target_size = (input_shape[1], input_shape[2])  # (height, width)
-    
     predicted_chars = []
     for ch_img in char_imgs:
-        # Resize and normalize each image to match the model input
-        processed = fix_dimension(ch_img, target_size)
-        processed = processed.reshape(1, target_size[0], target_size[1], input_shape[3])
+        # Resize segmented character to 28x28 and convert to 3-channel normalized float32 image
+        processed = fix_dimension(ch_img)
+        # Add batch dimension: shape (1,28,28,3)
+        processed = processed.reshape(1, 28, 28, 3)
         preds = model.predict(processed)
         pred_idx = int(np.argmax(preds))
         predicted_chars.append(char_dict[pred_idx])
     return ''.join(predicted_chars)
+
 
 # -----------------------------------
 # Custom F1 Metric (for model loading)
