@@ -33,13 +33,13 @@ from components.header import render_header
 from components.footer import render_footer
 from components.sidebar import render_sidebar
 from components.login import render_login
+
 # ==== Page Config ====
 st.set_page_config(page_title="Bharat Number Plate Detector", layout="wide")
 
 # ==== Session Setup ====
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-
 
 # ==== Login Interface ====
 if not st.session_state.logged_in:
@@ -208,56 +208,38 @@ def recognize_plate_text(image):
     return predict_plate_number(cnn_model, char_imgs)
 
 def run_detection(image):
-    if method == "YOLOv8 (Deep Learning)":
-        # Run YOLO detection and return the result directly.
+    if method == "YOLOv8 (Car)":
         return detect_yolo(image)
     elif method == "Traditional CV (Canny + Contours)":
-        # Run traditional Canny and contour detection.
         return detect_traditional(image)
     elif method == "Color Segmentation":
-        # Use color segmentation only.
         return detect_color(image)
-    elif method == "Edge + Morph Filter":
-        # Use edge detection with morphological filtering.
+    elif method == "Edge + Morph Filter (Bike)":
         return detect_morph(image)
-    elif method == "CNN Classifier (Custom DL)":
-        # For CNN-based plate detection and recognition, run the CNN routine.
+    elif method == "CNN Classifier (Bike/Car)":
         return detect_cnn(image)
-    elif method == "OCR Plate Recognition":
-        # For OCR-based plate recognition.
+    elif method == "OCR Plate Recognition (Bike/Car)":
         return detect_ocr_plate(image)
     else:
         return image
-
-
-# -------- Helper: Overlay Plate Text on an image --------
-def overlay_plate_text(image, plate_text):
-    """
-    Overlays "Number Plate: <plate_text>" in the top left corner of the image with a black rectangle background.
-    """
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 1.0
-    thickness = 2
-    text = f"Number Plate: {plate_text}"
-    (w, h), baseline = cv2.getTextSize(text, font, font_scale, thickness)
-    # Define top-left point (for example, (10, h+10))
-    x, y = 10, h + 10
-    # Draw filled rectangle (black) as background
-    cv2.rectangle(image, (x - 5, y - h - 5), (x + w + 5, y + baseline + 5), (0, 0, 0), -1)
-    # Put white text over it
-    cv2.putText(image, text, (x, y), font, font_scale, (255, 255, 255), thickness)
-    return image
 
 # ---------- Image Upload ----------
 if input_type == "Image":
     uploaded_image = st.file_uploader("Upload an Image", type=["jpg", "jpeg", "png"])
     if uploaded_image:
-        img_data = np.frombuffer(uploaded_image.read(), np.uint8)
-        image = cv2.imdecode(img_data, cv2.IMREAD_COLOR)
-        # Show the uploaded image first
-        st.image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
+        # Always update the raw image bytes in session state
+        st.session_state.raw_image = uploaded_image.getvalue()
+        # Decode the raw image bytes to create a fresh original image copy
+        img_data = np.frombuffer(st.session_state.raw_image, np.uint8)
+        original_image = cv2.imdecode(img_data, cv2.IMREAD_COLOR)
+        
+        # Display the uploaded (original) image
+        st.image(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB),
                  caption="Uploaded Image", use_container_width=True)
-        result = run_detection(image.copy())
+        
+        # Run the detection algorithm on a fresh copy of the original image
+        result = run_detection(original_image.copy())
+        
         if method == "OCR Plate Recognition":
             annotated_image, recognized_texts = result
             st.image(cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB),
@@ -281,6 +263,7 @@ elif input_type == "Video":
             ret, frame = cap.read()
             if not ret:
                 break
+            # Always work on a fresh copy of each frame
             result = run_detection(frame.copy())
             if isinstance(result, tuple):
                 annotated_frame, _ = result

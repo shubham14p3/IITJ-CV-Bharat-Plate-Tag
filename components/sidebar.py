@@ -7,12 +7,12 @@ def render_sidebar():
     method = st.sidebar.selectbox(
         "Detection Method",
         [
-            "YOLOv8 (Deep Learning)",
+            "YOLOv8 (Car)",
             "Traditional CV (Canny + Contours)",
             "Color Segmentation",
-            "Edge + Morph Filter",
-            "CNN Classifier (Custom DL)",
-            "OCR Plate Recognition",
+            "Edge + Morph Filter (Bike)",
+            "CNN Classifier (Bike/Car)",
+            "OCR Plate Recognition (Bike/Car)",
         ],
     )
     conf_threshold = st.sidebar.slider("Confidence Threshold", 25, 100, 45) / 100
