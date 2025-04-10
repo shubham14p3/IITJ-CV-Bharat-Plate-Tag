@@ -138,6 +138,8 @@ BHARAT-PLATE-TAG/
 ├── setup.sh
 └── webapp.sh
 ```
+## 🗂 Project Report
+[Project Report](./assets/Group_13_report.pdf)
 
 ---
 
@@ -234,6 +236,13 @@ streamlit run app.py
 ![CNN Classifier (Bike/Car Detection)](assets/cnn3.JPG) 
 ![CNN Classifier (Bike/Car Detection)](assets/cnn4.JPG) 
 ![CNN Classifier (Bike/Car Detection)](assets/cnn5.JPG) 
+
+### Training Models
+![Training](assets/1.PNG) 
+![Training](assets/2.PNG) 
+![Training](assets/3.PNG) 
+![Training](assets/4.PNG) 
+![Training](assets/5.PNG) 
 
 ### OCR Plate Recognition (Optional Check)
 ![OCR Plate Recognition (Optional Check)](assets/ocr.JPG) 
