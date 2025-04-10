@@ -1,5 +1,5 @@
 import sys
-# On Windows, set the event loop policy to avoid "no running event loop" errors
+# On Windows, setting the event loop policy to avoid "no running event loop" errors
 if sys.platform.startswith("win"):
     import asyncio
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -17,7 +17,7 @@ from ultralytics import YOLO
 import pytesseract
 from tensorflow.keras.models import load_model
 
-# Import your modules from src
+# Importing all modules from src
 from src.SQLManager import DatabaseManager
 from src.sort import *
 from src.PlateGen import PlateGen
@@ -28,13 +28,13 @@ from src.cnn_plate_pipeline import (
     load_or_train_cnn_model
 )
 
-# Import components
+# Import components as per need
 from components.header import render_header
 from components.footer import render_footer
 from components.sidebar import render_sidebar
 from components.login import render_login
 
-# ==== Page Config ====
+# ==== Page Configuration ====
 st.set_page_config(page_title="Bharat Number Plate Detector", layout="wide")
 
 # ==== Session Setup ====
@@ -88,7 +88,6 @@ def overlay_plate_text(image, plate_text):
     thickness = 2
     text = f"Number Plate: {plate_text}"
     (w, h), baseline = cv2.getTextSize(text, font, font_scale, thickness)
-    # Define top-left corner (10, h+10) and draw a black rectangle behind the text
     x, y = 10, h + 10
     cv2.rectangle(image, (x - 5, y - h - 5), (x + w + 5, y + baseline + 5), (0, 0, 0), -1)
     cv2.putText(image, text, (x, y), font, font_scale, (255, 255, 255), thickness)
@@ -208,20 +207,24 @@ def recognize_plate_text(image):
     return predict_plate_number(cnn_model, char_imgs)
 
 def run_detection(image):
-    if method == "YOLOv8 (Car)":
-        return detect_yolo(image)
-    elif method == "Traditional CV (Canny + Contours)":
-        return detect_traditional(image)
-    elif method == "Color Segmentation":
-        return detect_color(image)
-    elif method == "Edge + Morph Filter (Bike)":
-        return detect_morph(image)
-    elif method == "CNN Classifier (Bike/Car)":
-        return detect_cnn(image)
-    elif method == "OCR Plate Recognition (Bike/Car)":
-        return detect_ocr_plate(image)
-    else:
-        return image
+    try:
+        if method == "YOLOv8 (Car)":
+            return detect_yolo(image)
+        elif method == "Traditional CV (Canny + Contours)":
+            return detect_traditional(image)
+        elif method == "Color Segmentation":
+            return detect_color(image)
+        elif method == "Edge + Morph Filter (Bike)":
+            return detect_morph(image)
+        elif method == "CNN Classifier (Bike/Car)":
+            return detect_cnn(image)
+        elif method == "OCR Plate Recognition (Bike/Car)":
+            return detect_ocr_plate(image)
+        else:
+            return image
+    except Exception as e:
+        st.error(f"🚨 Detection failed please upload a clear plate: {e}")
+        return None
 
 # ---------- Image Upload ----------
 if input_type == "Image":
@@ -232,24 +235,36 @@ if input_type == "Image":
         # Decode the raw image bytes to create a fresh original image copy
         img_data = np.frombuffer(st.session_state.raw_image, np.uint8)
         original_image = cv2.imdecode(img_data, cv2.IMREAD_COLOR)
-        
+
+        # Validating original image
+        if original_image is None:
+            st.error("Uploaded file is not a valid image.")
+            st.stop()
+
         # Display the uploaded (original) image
         st.image(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB),
                  caption="Uploaded Image", use_container_width=True)
-        
+
         # Run the detection algorithm on a fresh copy of the original image
         result = run_detection(original_image.copy())
-        
-        if method == "OCR Plate Recognition":
-            annotated_image, recognized_texts = result
-            st.image(cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB),
-                     caption="Detection Result",
-                     use_container_width=True)
-            st.write("Recognized Plate(s):", recognized_texts)
+
+        # OCR Method: Expecting a tuple (image, recognized_texts)
+        if method == "OCR Plate Recognition (Bike/Car)":
+            if result is None or not isinstance(result, tuple) or result[0] is None:
+                st.error("❌ OCR failed: Detection returned no valid image.")
+            else:
+                annotated_image, recognized_texts = result
+                st.image(cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB),
+                         caption="Detection Result", use_container_width=True)
+                st.write("Recognized Plate(s):", recognized_texts)
+
+        # CNN Classifier or other methods: Expecting an image (numpy array)
         else:
-            st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB),
-                     caption="Detection Result",
-                     use_container_width=True)
+            if result is None or not isinstance(result, np.ndarray):
+                st.error("❌ Detection failed: No valid image output.")
+            else:
+                st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB),
+                         caption="Detection Result", use_container_width=True)
 
 # ---------- Video Upload ----------
 elif input_type == "Video":
@@ -259,18 +274,31 @@ elif input_type == "Video":
         tfile.write(uploaded_video.read())
         cap = cv2.VideoCapture(tfile.name)
         stframe = st.empty()
+
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
-            # Always work on a fresh copy of each frame
+
             result = run_detection(frame.copy())
-            if isinstance(result, tuple):
+
+            # OCR method returns a tuple (image, text)
+            if method == "OCR Plate Recognition (Bike/Car)":
+                if result is None or not isinstance(result, tuple) or result[0] is None:
+                    continue  # Skip invalid frame
                 annotated_frame, _ = result
             else:
+                if result is None or not isinstance(result, np.ndarray):
+                    continue  # Skip invalid frame
                 annotated_frame = result
-            stframe.image(cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB),
-                          use_container_width=True, channels="RGB")
+
+            try:
+                rgb_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+                stframe.image(rgb_frame, use_container_width=True, channels="RGB")
+            except cv2.error as e:
+                st.warning(f"Skipped a frame due to OpenCV error: {e}")
+                continue
+
         cap.release()
 
 # ---------- Database Viewer ----------

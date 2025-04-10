@@ -196,7 +196,7 @@ def load_or_train_cnn_model(model_path='models/plate_classifier.h5'):
     return model
 
 # -----------------------------------
-# Exported Functions
+# Exporting all Functions
 # -----------------------------------
 __all__ = [
     "detect_license_plate",
