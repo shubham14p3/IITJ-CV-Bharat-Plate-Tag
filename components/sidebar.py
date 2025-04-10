@@ -1,4 +1,3 @@
-# components/sidebar.py
 import streamlit as st
 
 def render_sidebar():
@@ -17,6 +16,16 @@ def render_sidebar():
     )
     conf_threshold = st.sidebar.slider("Confidence Threshold", 25, 100, 45) / 100
     show_db = st.sidebar.checkbox("Show Plate Log")
+
+    # Add download button for the sample file
+    with open("assets/sample.zip", "rb") as file:
+        st.sidebar.download_button(
+            label="📥 Download Sample Files",
+            data=file,
+            file_name="sample.zip",
+            mime="application/zip"
+        )
+
     if st.sidebar.button("🚪 Logout"):
         st.session_state.logged_in = False
         st.rerun()

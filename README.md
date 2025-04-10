@@ -141,6 +141,8 @@ BHARAT-PLATE-TAG/
 ## 🗂 Project Report
 [Project Report](./assets/Group_13_report.pdf)
 
+[Project Video](./assets/Group_13_demo.mp4)
+
 ---
 
 ## 🔍 Detection Modes Explained
